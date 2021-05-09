@@ -1,0 +1,46 @@
+version: '3'
+
+services: 
+  mysqldb:
+    image: mysql
+    restart: always
+    env_file: ./.env
+    environment:
+      MYSQL_ROOT_PASSWORD: $MYSQL_ROOT_PASSWORD
+      MYSQL_DATABASE: $MYSQL_DATABASE
+    ports:
+      - $MYSQL_LOCAL_PORT:$MYSQL_DOCKER_PORT
+    volumes: 
+      - db-config:/etc/mysql
+      - db-data:/var/lib/mysql
+      - ./db/backup/files/:/data_backup/data
+  app:
+    build:
+      context: .
+      dockerfile: ./app/Dockerfile
+    image: node-mysql-app
+    depends_on: 
+        - mysqldb
+    stdin_open: true
+    tty: true
+    environment: 
+        MYSQL_HOST: 'mysqldb'
+        MYSQL_ROOT_PASSWORD: $MYSQL_ROOT_PASSWORD
+        MYSQL_DATABASE: $MYSQL_DATABASE
+    ports:
+        - $APP_PORT:3000
+    volumes:
+        - ./app/src/:/app
+  nginx:
+      image: nginx:latest
+      container_name: nginx-meir
+      volumes:
+        - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+        - ./nginx/500.html:/500.html
+      ports:
+        - $NGINX_HTTP:80
+        - $NGINX_SSL:443
+
+volumes: 
+  db-config:
+  db-data:
